@@ -1,0 +1,2 @@
+Antonio Neto;123.234.345-04;12/02;Clínico Geral;09:00
+Maria Thereza;123.234.345-03;13/03;Odontologia;16:00
