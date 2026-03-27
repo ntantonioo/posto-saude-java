@@ -24,7 +24,12 @@ public class Especialidade {
     public void setHorariosDisponiveis(List<String> horariosDisponiveis) {
         this.horariosDisponiveis = horariosDisponiveis;
     }
+
+    //CORREÇÃO DE ERRO: Verifica se foi colocado um horario vazio (" ")
     public void adicionarHorario(String horario) {
+        if (horario == null || horario.trim().isEmpty()) {
+            throw new IllegalArgumentException("Horário não pode ser vazio!");
+        }
         horariosDisponiveis.add(horario);
     }
     public void listarHorarios() {

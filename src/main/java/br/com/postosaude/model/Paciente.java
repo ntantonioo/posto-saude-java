@@ -13,19 +13,25 @@ public class Paciente {
     public String getNome() {
         return nome;
     }
+
+    // CORREÇÃO PARA ERRO: Nome vazio ou muito curto.
+    // IllegalArgumentException -> Valor aprovado, mas vai contra a "regra" estabelecida no programa
     public void setNome(String nome) {
-        if ( nome != null &&  nome.length() > 3 ){
-            this.nome = nome;
+        if ( nome == null || nome.trim().length() <= 3 ) {
+            throw new IllegalArgumentException("Nome muito curto");
         }
-        else {
-            System.out.println("Erro: Nome muito curto ou invalido!");
-            this.nome = "Sem nome";
-        }
+        this.nome = nome;
+
     }
     public String getCpf() {
         return cpf;
     }
+
+    //CORREÇÃO PARA ERRO: CPF vazio ou com poucaos caracteres
     public void setCpf(String cpf) {
+        if (cpf == null || cpf.trim().length() != 11) {
+            throw new IllegalArgumentException("CPF deve ter no minimo 11 caracteres");
+        }
         this.cpf = cpf;
     }
 
