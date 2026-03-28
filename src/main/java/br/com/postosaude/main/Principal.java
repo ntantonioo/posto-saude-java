@@ -1,16 +1,21 @@
 package br.com.postosaude.main;
 
-import java.util.Scanner;
-import java.util.ArrayList;
+import java.util.InputMismatchException;
 import java.util.List;
-import java.util.InputMismatchException; // - necessário para capturar erro quando o tipo não é o esperado
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.FileWriter;
+import java.util.Scanner;
 
-import br.com.postosaude.model.Paciente;
-import br.com.postosaude.model.Especialidade;
 import br.com.postosaude.model.Agendamento;
+import br.com.postosaude.model.Especialidade;
+import br.com.postosaude.service.CatalogoDeAtendimento;
+
+/**
+ * Ponto de entrada do sistema.
+ * Esta classe é responsável APENAS pela interface com o usuário:
+ *  - exibir menus
+ *  - ler entradas do teclado
+ *  - tratar exceções de entrada (InputMismatchException)
+ *  - exibir resultados
+ */
 
 public class Principal {
 
@@ -18,30 +23,33 @@ public class Principal {
 
         Scanner teclado = new Scanner(System.in);
 
-        ArrayList<Agendamento> listaAgendamentos = new ArrayList<>();
-        ArrayList<Especialidade> especialidades = new ArrayList<>();
 
-        // DEFINIÇÃO DAS ESPECIALIDADES
-        Especialidade clinico = new Especialidade("Clínico Geral");
-        Especialidade pediatria = new Especialidade("Pediatria");
+        // Instancia o serviço central
+
+        CatalogoDeAtendimento catalogo = new CatalogoDeAtendimento();
+
+        // Criação das especialidades (clinico, pediatria, odontologia, nutrologia)
+        Especialidade clinico     = new Especialidade("Clínico Geral");
+        Especialidade pediatria   = new Especialidade("Pediatria");
         Especialidade odontologia = new Especialidade("Odontologia");
-        Especialidade nutrologia = new Especialidade("Nutrologia");
+        Especialidade nutrologia  = new Especialidade("Nutrologia");
 
-        //ADIÇÃO DE HORÁRIO PARA CADA ESPECIALIDADE
+        // Adição de horários (Específicos)
         clinico.adicionarHorario("08:00");
         clinico.adicionarHorario("09:00");
         pediatria.adicionarHorario("13:00");
         odontologia.adicionarHorario("16:00");
         nutrologia.adicionarHorario("19:00");
 
-        especialidades.add(clinico);
-        especialidades.add(pediatria);
-        especialidades.add(odontologia);
-        especialidades.add(nutrologia);
+        catalogo.adicionarEspecialidade(clinico);
+        catalogo.adicionarEspecialidade(pediatria);
+        catalogo.adicionarEspecialidade(odontologia);
+        catalogo.adicionarEspecialidade(nutrologia);
 
+
+        // Loop principal do menu
         int opcao = -1;
 
-        //LOOP PARA O MENU GUIADO PELO opcao(-1)
         while (opcao != 0) {
             System.out.println("\n--- SISTEMA DO POSTO DE SAÚDE ---");
             System.out.println("1 - Agendar Consulta");
@@ -51,37 +59,22 @@ public class Principal {
             System.out.println("0 - Sair");
             System.out.print("Escolha: ");
 
-            // EXCEÇÃO 1: usuário digita letra/símbolo em vez de número
-            // InputMismatchException é lançada quando o tipo não bate
-
+            // EXCEÇÃO 1: letra/símbolo em vez de número
             try {
                 opcao = teclado.nextInt();
             } catch (InputMismatchException e) {
                 System.out.println(" ERRO: Digite apenas um número inteiro!");
-                teclado.nextLine(); // limpa o buffer do teclado para não travar
-                opcao = -1;        // define opção inválida para repetir o menu
-                continue;          // volta ao início do while
+                teclado.nextLine();
+                opcao = -1;
+                continue;
             }
             teclado.nextLine();
 
-            // CADASTRO
+
+            // OPÇÃO 1 — AGENDAR
             if (opcao == 1) {
                 System.out.println("\nNome do Paciente:");
                 String nome = teclado.nextLine();
-
-
-                // EXCEÇÃO 2: nome muito curto (validação manual com exceção)
-                // Lançamos uma exceção personalizada com "throw new"
-
-                try {
-                    if (nome == null || nome.trim().length() <= 3) {
-                        // "throw" = jogar/lançar uma exceção manualmente
-                        throw new IllegalArgumentException("Nome muito curto. Digite ao menos 4 caracteres.");
-                    }
-                } catch (IllegalArgumentException e) {
-                    System.out.println(" ERRO: " + e.getMessage());
-                    continue; // volta ao menu
-                }
 
                 System.out.println("CPF:");
                 String cpf = teclado.nextLine();
@@ -89,15 +82,15 @@ public class Principal {
                 System.out.println("Dia da consulta (ex: 15/03):");
                 String dia = teclado.nextLine();
 
+                // Exibe especialidades disponíveis
+                List<Especialidade> especialidades = catalogo.getEspecialidades();
                 System.out.println("\nEscolha a especialidade:");
                 for (int i = 0; i < especialidades.size(); i++) {
                     System.out.println((i + 1) + " - " + especialidades.get(i).getNome());
                 }
 
+                // EXCEÇÃO 2: letra ao escolher especialidade
                 int escolhaEsp;
-
-
-                // EXCEÇÃO 3: digitou letra ao escolher a especialidade
                 try {
                     escolhaEsp = teclado.nextInt();
                     teclado.nextLine();
@@ -107,19 +100,16 @@ public class Principal {
                     continue;
                 }
 
-
-                // EXCEÇÃO 4: número fora do intervalo de especialidades
-                // IndexOutOfBoundsException ocorre ao acessar índice inválido
+                // EXCEÇÃO 3: índice fora do intervalo
                 Especialidade espEscolhida;
                 try {
-                    espEscolhida = especialidades.get(escolhaEsp - 1);
+                    espEscolhida = catalogo.getEspecialidadePorIndice(escolhaEsp);
                 } catch (IndexOutOfBoundsException e) {
-                    System.out.println(" ERR0: Especialidade inválida. Escolha uma opção da lista.");
+                    System.out.println(" ERRO: Especialidade inválida. Escolha uma opção da lista.");
                     continue;
                 }
 
                 List<String> horarios = espEscolhida.getHorariosDisponiveis();
-
                 if (horarios.isEmpty()) {
                     System.out.println("Não há horários disponíveis para esta especialidade.");
                     continue;
@@ -130,10 +120,8 @@ public class Principal {
                     System.out.println((i + 1) + " - " + horarios.get(i));
                 }
 
+                // EXCEÇÃO 4: letra ao escolher horário
                 int escolhaHorario;
-
-
-                // EXCEÇÃO 5: digitou letra ao escolher o horário
                 try {
                     escolhaHorario = teclado.nextInt();
                     teclado.nextLine();
@@ -143,125 +131,73 @@ public class Principal {
                     continue;
                 }
 
-
-                // EXCEÇÃO 6: número fora do intervalo de horários
-                String horarioEscolhido;
+                // EXCEÇÃO 5 e 6: nome inválido ou índice de horário fora do intervalo
+                // (ambos lançados dentro do catalogo.agendar())
                 try {
-                    horarioEscolhido = horarios.get(escolhaHorario - 1);
-                } catch (IndexOutOfBoundsException e) {
-                    System.out.println(" ERRO: Horário inválido. Escolha um horário da lista.");
-                    continue;
+                    Agendamento novo = catalogo.agendar(nome, cpf, dia, espEscolhida, escolhaHorario);
+                    System.out.println(" Agendamento realizado com sucesso! → " + novo);
+                } catch (IllegalArgumentException | IndexOutOfBoundsException e) {
+                    System.out.println(" ERRO: " + e.getMessage());
                 }
-
-                horarios.remove(escolhaHorario - 1);
-
-                Paciente novoPaciente = new Paciente(nome, cpf);
-                Agendamento novoAgendamento = new Agendamento(novoPaciente, dia, espEscolhida, horarioEscolhido);
-
-                listaAgendamentos.add(novoAgendamento);
-                System.out.println(" Agendamento realizado com sucesso!");
             }
 
-            // LISTAR
+            // OPÇÃO 2 — LISTAR
             else if (opcao == 2) {
-                System.out.println("\n--- LISTA DE AGENDAMENTOS ---");
-                if (listaAgendamentos.isEmpty()) {
+                System.out.println("\n--- LISTA DE AGENDAMENTOS (" +
+                        catalogo.totalDeAgendamentos() + ") ---");
+                if (catalogo.estaVazio()) {
                     System.out.println("Nenhum agendamento encontrado.");
                 } else {
-                    for (Agendamento a : listaAgendamentos) {
+                    for (Agendamento a : catalogo.listarTodos()) {
                         System.out.println(a);
                     }
                 }
             }
 
-            // BUSCAR
+            // OPÇÃO 3 — BUSCAR
             else if (opcao == 3) {
                 System.out.println("Digite o nome para busca:");
                 String nomeBusca = teclado.nextLine();
 
-
-                // EXCEÇÃO 7: nome vazio na busca
                 try {
-                    if (nomeBusca == null || nomeBusca.trim().isEmpty()) {
-                        throw new IllegalArgumentException("O nome não pode estar vazio.");
+                    List<Agendamento> encontrados = catalogo.buscarPorNome(nomeBusca);
+                    if (encontrados.isEmpty()) {
+                        System.out.println("Nenhum agendamento para este nome.");
+                    } else {
+                        for (Agendamento a : encontrados) {
+                            System.out.println("Consulta encontrada: " + a);
+                        }
                     }
                 } catch (IllegalArgumentException e) {
                     System.out.println(" ERRO: " + e.getMessage());
-                    continue;
                 }
-
-                boolean encontrado = false;
-                for (Agendamento a : listaAgendamentos) {
-                    if (a.getPaciente().getNome().equalsIgnoreCase(nomeBusca)) {
-                        System.out.println("Consulta encontrada: " + a);
-                        encontrado = true;
-                    }
-                }
-                if (!encontrado) System.out.println("Nenhum agendamento para este nome.");
             }
 
-            // CANCELAR
+            // OPÇÃO 4 — CANCELAR
             else if (opcao == 4) {
                 System.out.println("Digite o nome do paciente para CANCELAR:");
                 String nomeRemover = teclado.nextLine();
 
-
-                // EXCEÇÃO 8: nome vazio no cancelamento
                 try {
-                    if (nomeRemover == null || nomeRemover.trim().isEmpty()) {
-                        throw new IllegalArgumentException("O nome não pode estar vazio.");
+                    Agendamento cancelado = catalogo.cancelarPorNome(nomeRemover);
+                    if (cancelado != null) {
+                        System.out.println(" Consulta removida! O horário " +
+                                cancelado.getHorario() + " voltou para a lista.");
+                    } else {
+                        System.out.println("Paciente não encontrado.");
                     }
                 } catch (IllegalArgumentException e) {
                     System.out.println(" ERRO: " + e.getMessage());
-                    continue;
                 }
-
-                boolean removido = false;
-                for (int i = 0; i < listaAgendamentos.size(); i++) {
-                    Agendamento agenda = listaAgendamentos.get(i);
-                    if (agenda.getPaciente().getNome().equalsIgnoreCase(nomeRemover)) {
-                        String h = agenda.getHorario();
-                        agenda.getEspecialidade().adicionarHorario(h);
-                        listaAgendamentos.remove(i);
-                        System.out.println(" Consulta removida! O horário " + h + " voltou para a lista.");
-                        removido = true;
-                        break;
-                    }
-                }
-                if (!removido) System.out.println("Paciente não encontrado.");
             }
         }
 
+        // Ao sair, salva os dados via serviço
         if (opcao == 0) {
-            salvarDados(listaAgendamentos);
+            catalogo.salvarEmArquivo("consultas.txt");
             System.out.println("Sistema encerrado.");
         }
 
         teclado.close();
-    }
-
-    public static void salvarDados(ArrayList<Agendamento> lista) {
-        String nomeArquivo = "consultas.txt";
-
-
-        // EXCEÇÃO 9: erro ao salvar o arquivo (ex: sem permissão de escrita)
-        // IOException é lançada automaticamente por operações de arquivo
-        // O "try-with-resources" (try com parênteses) fecha o arquivo
-        // automaticamente mesmo se der erro — não precisa de finally!
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(nomeArquivo))) {
-            for (Agendamento a : lista) {
-                String linha = a.getPaciente().getNome() + ";" +
-                        a.getPaciente().getCpf() + ";" +
-                        a.getDia() + ";" +
-                        a.getEspecialidade().getNome() + ";" +
-                        a.getHorario();
-                bw.write(linha);
-                bw.newLine();
-            }
-            System.out.println(" Dados salvos com sucesso em " + nomeArquivo);
-        } catch (IOException e) {
-            // getMessage() retorna a descrição técnica do erro
-            System.out.println(" ERRO ao salvar dados: " + e.getMessage());
-        }
     }
 }
